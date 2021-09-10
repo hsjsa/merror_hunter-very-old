@@ -46,7 +46,7 @@ def stats(update, context):
     stats = f'<b>Bot Uptime</b>\n<b>{currentTime}</b>\n\n' \
             f'<b>Start Time</b>\n<b>{current}</b>\n\n' \
             f'<b>Disk Space:</b> <b>{total}</b>\n' \
-            f'<b>Used:</b> <b>{used}</b> ' \
+            f'<b>Used:</b> <b>{used}</b>\n' \
             f'<b>Free:</b> <b>{free}</b>\n\n' \
             f'<b>📊Data Usage📊</b>\n<b>Upload:</b> <b>{sent}</b>\n' \
             f'<b>Download:</b> <b>{recv}</b>\n\n' \

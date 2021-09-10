@@ -36,6 +36,11 @@ import shutil
 ariaDlManager = AriaDownloadHelper()
 ariaDlManager.start_listener()
 
+URI_REGEX = \
+    r"(?i)\b((?:ftp|https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|" \
+    "(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|" \
+    "[^\s`!()\[\]{};:'\".,<>?«»“”‘’]))|magnet:\?xt=urn:btih:[\w!@#$&-?=%.()\\-`.+,/\"]*"
+
 class MirrorListener(listeners.MirrorListeners):
     def __init__(self, bot, update, pswd, isTar=False, extract=False, isZip=False, tag=None):
         super().__init__(bot, update)
@@ -279,23 +284,6 @@ def _mirror(bot, update, isTar=False, extract=False, isZip=False):
         LOGGER.info(link)
     link = link.strip()
     reply_to = update.message.reply_to_message
-    reply_link = update.message.reply_to_message
-    reply_text = reply_to.text.split('\n')[0]
-    if bot_utils.is_magnet(reply_text):
-        link = reply_text
-        sendtextlog(f"{uname} has reply - \n\n<code>{link}</code>\n\nUser ID : {uid}", bot, update)
-    elif bot_utils.is_url(reply_text):
-        link = reply_text
-        sendtextlog(f"{uname} has reply - \n\n<code>{link}</code>\n\nUser ID : {uid}", bot, update)
-    elif bot_utils.is_gdrive_link(reply_text):
-        link = reply_text
-        sendtextlog(f"{uname} has reply - \n\n<code>{link}</code>\n\nUser ID : {uid}", bot, update)
-    elif bot_utils.is_mega_link(reply_text):
-        link = reply_text
-        sendtextlog(f"{uname} has reply - \n\n<code>{link}</code>\n\nUser ID : {uid}", bot, update)
-    else:
-         pass
-    
     if reply_to is not None:
         file = None
         tag = reply_to.from_user.username
@@ -304,6 +292,13 @@ def _mirror(bot, update, isTar=False, extract=False, isZip=False):
             if i is not None:
                 file = i
                 break
+        try:
+            reply_text = re.search(URI_REGEX, reply_to.text)
+            LOGGER.info(f"URL extracted: {reply_text[0]}")
+            link = reply_text[0]
+        except TypeError:
+            pass
+
         if (
             not bot_utils.is_url(link)
             and not bot_utils.is_magnet(link)

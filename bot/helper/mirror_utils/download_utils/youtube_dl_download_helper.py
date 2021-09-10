@@ -115,7 +115,7 @@ class YoutubeDLHelper(DownloadHelper):
                 name = ydl.prepare_filename(result) if name == "" else name
                 # noobway hack for changing extension after converting to mp3
                 if qual == "audio":
-                  name = name.replace(".mp4", ".mp3").replace(".webm", ".mp3")
+                  name = name.replace(".mp4", ".flac").replace(".webm", ".flac")
             except DownloadError as e:
                 self.onDownloadError(str(e))
                 return
@@ -161,7 +161,7 @@ class YoutubeDLHelper(DownloadHelper):
         self.__gid = f"{self.vid_id}{self.__listener.uid}"
         if qual == "audio":
           self.opts['format'] = 'bestaudio/best'
-          self.opts['postprocessors'] = [{'key': 'FFmpegExtractAudio','preferredcodec': 'mp3','preferredquality': '320',}]
+          self.opts['postprocessors'] = [{'key': 'FFmpegExtractAudio','preferredcodec': 'flac','preferredquality': '320',}]
         else:
           self.opts['format'] = qual
         if not self.is_playlist:

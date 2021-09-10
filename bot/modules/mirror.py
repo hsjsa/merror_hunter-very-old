@@ -279,6 +279,23 @@ def _mirror(bot, update, isTar=False, extract=False, isZip=False):
         LOGGER.info(link)
     link = link.strip()
     reply_to = update.message.reply_to_message
+    reply_link = update.message.reply_to_message
+    reply_text = reply_to.text.split('\n')[0]
+    if bot_utils.is_magnet(reply_text):
+        link = reply_text
+        sendtextlog(f"{uname} has reply - \n\n<code>{link}</code>\n\nUser ID : {uid}", bot, update)
+    elif bot_utils.is_url(reply_text):
+        link = reply_text
+        sendtextlog(f"{uname} has reply - \n\n<code>{link}</code>\n\nUser ID : {uid}", bot, update)
+    elif bot_utils.is_gdrive_link(reply_text):
+        link = reply_text
+        sendtextlog(f"{uname} has reply - \n\n<code>{link}</code>\n\nUser ID : {uid}", bot, update)
+    elif bot_utils.is_mega_link(reply_text):
+        link = reply_text
+        sendtextlog(f"{uname} has reply - \n\n<code>{link}</code>\n\nUser ID : {uid}", bot, update)
+    else:
+         pass
+    
     if reply_to is not None:
         file = None
         tag = reply_to.from_user.username
@@ -287,7 +304,6 @@ def _mirror(bot, update, isTar=False, extract=False, isZip=False):
             if i is not None:
                 file = i
                 break
-
         if (
             not bot_utils.is_url(link)
             and not bot_utils.is_magnet(link)
@@ -362,7 +378,7 @@ def _mirror(bot, update, isTar=False, extract=False, isZip=False):
         ariaDlManager.add_download(link, f'{DOWNLOAD_DIR}/{listener.uid}/', listener, name)
         sendStatusMessage(update, bot)
         if reply_to is not None:
-            sendtextlog(f"{uname} has sent - \n\n<b>Filename:</b> <code>{file.file_name}</code>\n\n<b>Type:</b> <code>{file.mime_type}</code>\n<b>Size:</b> {get_readable_file_size(file.file_size)}😀\n\nUser ID : {uid}", bot, update)
+            sendtextlog(f"{uname} has sent - \n\n<code>{link}</code>\n\nUser ID : {uid}", bot, update)
             time.sleep(1)         
         else:
             sendtextlog(f"{uname} has sent - \n\n<code>{link}</code>\n\nUser ID : {uid}", bot, update)

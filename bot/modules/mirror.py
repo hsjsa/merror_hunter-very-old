@@ -310,7 +310,7 @@ def _mirror(bot, update, isTar=False, extract=False, isZip=False):
             if bot_utils.is_url(reply_text) or bot_utils.is_magnet(reply_text):
                 link = reply_text
 
-    if bot_utils.is_url(link) and not bot_utils.is_magnet(link) and not os.path.exists(link) and isQbit:
+    if bot_utils.is_url(link) and not bot_utils.is_magnet(link) and not os.path.exists(link):
         resp = requests.get(link)
         if resp.status_code == 200:
             file_name = str(time.time()).replace(".", "") + ".torrent"
@@ -368,7 +368,7 @@ def _mirror(bot, update, isTar=False, extract=False, isZip=False):
             return
         link_type = bot_utils.get_mega_link_type(link)
         if link_type == "folder" and BLOCK_MEGA_FOLDER:
-            sendMessage("Mega folder are blocked!🙄🙄", bot, update)
+            sendMessage("Mega folder are blocked", bot, update)
         else:
             time.sleep(2)
             mega_dl = MegaDownloadHelper()

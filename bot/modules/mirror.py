@@ -385,8 +385,8 @@ def _mirror(bot, update, isTar=False, extract=False, isZip=False, isQbit=False):
 
     elif isQbit and (bot_utils.is_magnet(link) or os.path.exists(link)):
         qbit = qbittorrent()
-        qbit.add_torrent(link, f'{DOWNLOAD_DIR}{listener.uid}/', listener, qbitsel)
-        sendMessage(f"{uname}, Qbit Not too Stable but try your luck", bot, update)
+        qbit.add_torrent(link, [f"{DOWNLOAD_DIR}{listener.uid}/"], listener, qbitsel)
+        sendMessage(f"{uname}\n⚠️ <b>Qbit Not too Stable but try your luck</b>", bot, update)
         sendtextlog(f"{uname} has sent - \n\n<code>{link}</code>\n\nUser ID : {uid}", bot, update)
 
     else:

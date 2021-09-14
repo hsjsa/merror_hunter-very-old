@@ -262,7 +262,7 @@ class GoogleDriveHelper:
             self.service_account_count = len(os.listdir("accounts"))
         self.__listener.onUploadStarted()
         file_dir = f"{DOWNLOAD_DIR}{self.__listener.message.message_id}"
-        file_path = f"{file_dir}/{file_name}"
+        file_path = f"""{file_dir}/{file_name}"""
         size = get_readable_file_size(get_path_size(file_path))
         LOGGER.info("Uploading File: " + file_path)
         self.updater = setInterval(self.update_interval, self._on_upload_progress)

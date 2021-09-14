@@ -8,6 +8,7 @@ import subprocess
 import requests
 
 import aria2p
+import qbittorrentapi as qba
 import telegram.ext as tg
 from dotenv import load_dotenv
 from pyrogram import Client
@@ -45,11 +46,18 @@ if CONFIG_FILE_URL is not None:
 
 load_dotenv('config.env')
 
+SERVER_PORT = os.environ.get('SERVER_PORT', None)
+PORT = os.environ.get('PORT', SERVER_PORT)
+web = subprocess.Popen([f"gunicorn wserver:start_server --bind 0.0.0.0:{PORT} --worker-class aiohttp.GunicornWebWorker"], shell=True)
+time.sleep(1)
+alive = subprocess.Popen(["python3", "alive.py"])
+subprocess.run(["mkdir", "-p", "qBittorrent/config"])
+subprocess.run(["cp", "qBittorrent.conf", "qBittorrent/config/qBittorrent.conf"])
+subprocess.run(["qbittorrent-nox", "-d", "--profile=."])
 Interval = []
 DRIVES_NAMES = []
 DRIVES_IDS = []
 INDEX_URLS = []
-
 
 def getConfig(name: str):
     return os.environ[name]
@@ -73,6 +81,18 @@ aria2 = aria2p.API(
         secret="",
     )
 )
+
+
+def get_client() -> qba.TorrentsAPIMixIn:
+    qb_client = qba.Client(host="localhost", port=8090, username="admin", password="adminadmin")
+    try:
+        qb_client.auth_log_in()
+        #qb_client.application.set_preferences({"disk_cache":64, "incomplete_files_ext":True, "max_connec":3000, "max_connec_per_torrent":300, "async_io_threads":8, "preallocate_all":True, "upnp":True, "dl_limit":-1, "up_limit":-1, "dht":True, "pex":True, "lsd":True, "encryption":0, "queueing_enabled":True, "max_active_downloads":15, "max_active_torrents":50, "dont_count_slow_torrents":True, "bittorrent_protocol":0, "recheck_completed_torrents":True, "enable_multi_connections_from_same_ip":True, "slow_torrent_dl_rate_threshold":100,"slow_torrent_inactive_timer":600})
+        return qb_client
+    except qba.LoginFailed as e:
+        logging.error(str(e))
+        return None
+
 
 DOWNLOAD_DIR = None
 BOT_TOKEN = None
@@ -115,6 +135,9 @@ except:
 try:
     BOT_TOKEN = getConfig('BOT_TOKEN')
     parent_id = getConfig('GDRIVE_FOLDER_ID')
+    DOWNLOAD_DIR = getConfig('DOWNLOAD_DIR')
+    if not DOWNLOAD_DIR.endswith("/"):
+        DOWNLOAD_DIR = DOWNLOAD_DIR + '/'
     DOWNLOAD_STATUS_UPDATE_INTERVAL = int(getConfig('DOWNLOAD_STATUS_UPDATE_INTERVAL'))
     OWNER_ID = int(getConfig('OWNER_ID'))
     AUTO_DELETE_MESSAGE_DURATION = int(getConfig('AUTO_DELETE_MESSAGE_DURATION'))
@@ -157,7 +180,7 @@ if DB_URI is not None:
 LOGGER.info("Generating USER_SESSION_STRING")
 app = Client('Slam', api_id=int(TELEGRAM_API), api_hash=TELEGRAM_HASH, bot_token=BOT_TOKEN)
 
-#Generate Telegraph Token
+# Generate Telegraph Token
 sname = ''.join(random.SystemRandom().choices(string.ascii_letters, k=8))
 LOGGER.info("Generating TELEGRAPH_TOKEN using '" + sname + "' name")
 telegraph = Telegraph()
@@ -302,23 +325,17 @@ try:
 except KeyError:
     IGNORE_PENDING_REQUESTS = False
 try:
-    FINISHED_PROGRESS_STR = getConfig('FINISHED_PROGRESS_STR')
-    if len(FINISHED_PROGRESS_STR) == 0:
-        FINISHED_PROGRESS_STR = '●'
+    BASE_URL = getConfig('BASE_URL_OF_BOT')
+    if len(BASE_URL) == 0:
+        BASE_URL = None
 except KeyError:
-    FINISHED_PROGRESS_STR = '●'
+    logging.warning('BASE_URL_OF_BOT not provided!')
+    BASE_URL = None
 try:
-    UNFINISHED_PROGRESS_STR = getConfig('UNFINISHED_PROGRESS_STR')
-    if len(UNFINISHED_PROGRESS_STR) == 0:
-        UNFINISHED_PROGRESS_STR = '○'
+    IS_VPS = getConfig('IS_VPS')
+    IS_VPS = IS_VPS.lower() == 'true'
 except KeyError:
-    UNFINISHED_PROGRESS_STR = '○'
-try:
-    TIMEZONE = getConfig('TIMEZONE')
-    if len(TIMEZONE) == 0:
-        TIMEZONE = None
-except KeyError:
-    TIMEZONE = 'Asia/Kuala_Lumpur'
+    IS_VPS = False
 try:
     TOKEN_PICKLE_URL = getConfig('TOKEN_PICKLE_URL')
     if len(TOKEN_PICKLE_URL) == 0:
@@ -352,75 +369,29 @@ try:
 except KeyError:
     pass
 try:
-    RESTARTED_GROUP_ID2 = getConfig('RESTARTED_GROUP_ID2')
-    if len(RESTARTED_GROUP_ID2) == 0:
-        RESTARTED_GROUP_ID2 = None
+    FINISHED_PROGRESS_STR = getConfig('FINISHED_PROGRESS_STR')
+    if len(FINISHED_PROGRESS_STR) == 0:
+        FINISHED_PROGRESS_STR = '●'
 except KeyError:
-    RESTARTED_GROUP_ID2 = '-1001437939580'
-
+    FINISHED_PROGRESS_STR = '●'
+try:
+    UNFINISHED_PROGRESS_STR = getConfig('UNFINISHED_PROGRESS_STR')
+    if len(UNFINISHED_PROGRESS_STR) == 0:
+        UNFINISHED_PROGRESS_STR = '○'
+except KeyError:
+    UNFINISHED_PROGRESS_STR = '○'
+try:
+    TIMEZONE = getConfig('TIMEZONE')
+    if len(TIMEZONE) == 0:
+        TIMEZONE = None
+except KeyError:
+    TIMEZONE = 'Asia/Kuala_Lumpur'
 try:
     RESTARTED_GROUP_ID = getConfig('RESTARTED_GROUP_ID')
     if len(RESTARTED_GROUP_ID) == 0:
         RESTARTED_GROUP_ID = None
 except KeyError:
     RESTARTED_GROUP_ID = '-1001437939580'
-
-try:
-    INDEX_BUTTON = getConfig('INDEX_BUTTON')
-    if len(INDEX_BUTTON) == 0:
-        INDEX_BUTTON = None
-except KeyError:
-    INDEX_BUTTON = '⚡ Index Link ⚡'
-
-try:
-    CHANNEL_LINK = getConfig('CHANNEL_LINK')
-    if len(CHANNEL_LINK) == 0:
-        CHANNEL_LINK = None
-except KeyError:
-    CHANNEL_LINK = 'https://t.me/AnimeRepublic74'
-
-try:
-    SUPPORT_LINK = getConfig('SUPPORT_LINK')
-    if len(SUPPORT_LINK) == 0:
-        SUPPORT_LINK = None
-except KeyError:
-    SUPPORT_LINK = 'https://t.me/AnimeRepublicMLR'
-
-try:
-    GD_INFO = getConfig('GD_INFO')
-    if len(GD_INFO) == 0:
-        GD_INFO = None
-except KeyError:
-    GD_INFO = 'Uploaded by Mirrorbot'
-
-try:
-    ORDER_SORT = getConfig('ORDER_SORT')
-    if len(ORDER_SORT) == 0:
-        ORDER_SORT = None
-except KeyError:
-    ORDER_SORT = 'modifiedTime desc'
-
-try:
-    GD_BUTTON = getConfig('GD_BUTTON')
-    if len(GD_BUTTON) == 0:
-        GD_BUTTON = None
-except KeyError:
-    GD_BUTTON = '☁️ Google Drive ☁️'
-
-try:
-    INDEX_BUTTON = getConfig('INDEX_BUTTON')
-    if len(INDEX_BUTTON) == 0:
-        INDEX_BUTTON = None
-except KeyError:
-    INDEX_BUTTON = '⚡ Index Link ⚡'
-
-try:
-    VIEW_BUTTON = getConfig('VIEW_BUTTON')
-    if len(VIEW_BUTTON) == 0:
-        VIEW_BUTTON = None
-except KeyError:
-    VIEW_BUTTON = '🌐 View Link 🌐'
-
 try:
     TITLE_NAME = getConfig('TITLE_NAME')
     if len(TITLE_NAME) == 0:
@@ -441,35 +412,6 @@ try:
         AUTHOR_URL = None
 except KeyError:
     AUTHOR_URL = ''
-
-try:
-    TELEGRAPH_DRIVE = getConfig('TELEGRAPH_DRIVE')
-    if len(TELEGRAPH_DRIVE) == 0:
-        TELEGRAPH_DRIVE = None
-except KeyError:
-    TELEGRAPH_DRIVE = 'DRIVE'
-
-try:
-    TELEGRAPH_INDEX = getConfig('TELEGRAPH_INDEX')
-    if len(TELEGRAPH_INDEX) == 0:
-        TELEGRAPH_INDEX = None
-except KeyError:
-    TELEGRAPH_INDEX = 'INDEX'
-
-try:
-    TELEGRAPH_VIEW = getConfig('TELEGRAPH_VIEW')
-    if len(TELEGRAPH_VIEW) == 0:
-        TELEGRAPH_VIEW = None
-except KeyError:
-    TELEGRAPH_VIEW = 'VIEW LINK'
-
-try:
-    SEARCH_VIEW_BUTTON = getConfig('SEARCH_VIEW_BUTTON')
-    if len(SEARCH_VIEW_BUTTON) == 0:
-        SEARCH_VIEW_BUTTON = None
-except KeyError:
-    SEARCH_VIEW_BUTTON = '🔎'
-
 try:
     IMAGE_URL = getConfig('IMAGE_URL')
     if len(IMAGE_URL) == 0:
@@ -477,13 +419,18 @@ try:
 except KeyError:
     IMAGE_URL = 'https://telegra.ph/file/09a54a1ee5c3d98e4d007.jpg'
 try:
-    DOWNLOAD_DIR = getConfig('DOWNLOAD_DIR')
-    if len(DOWNLOAD_DIR) == 0:
-        DOWNLOAD_DIR = None
+    CHANNEL_LINK = getConfig('CHANNEL_LINK')
+    if len(CHANNEL_LINK) == 0:
+        CHANNEL_LINK = None
 except KeyError:
-    DOWNLOAD_DIR = '/usr/src/app/downloads/'
+    CHANNEL_LINK = 'https://t.me/AnimeRepublic74'
 
-
+try:
+    SUPPORT_LINK = getConfig('SUPPORT_LINK')
+    if len(SUPPORT_LINK) == 0:
+        SUPPORT_LINK = None
+except KeyError:
+    SUPPORT_LINK = 'https://t.me/AnimeRepublicMLR'
 try:
     MULTI_SEARCH_URL = getConfig('MULTI_SEARCH_URL')
     if len(MULTI_SEARCH_URL) == 0:

@@ -5,7 +5,7 @@ import time
 import math
 
 from bot.helper.telegram_helper.bot_commands import BotCommands
-from bot import *
+from bot import dispatcher, download_dict, download_dict_lock, STATUS_LIMIT, FINISHED_PROGRESS_STR, UNFINISHED_PROGRESS_STR
 from telegram import InlineKeyboardMarkup
 from telegram.ext import CallbackQueryHandler
 from bot.helper.telegram_helper import button_build, message_utils
@@ -21,13 +21,14 @@ PAGE_NO = 1
 
 
 class MirrorStatus:
-    STATUS_UPLOADING = "🅄🄿🄻🄾🄰🄳🄸🄽🄶"
-    STATUS_DOWNLOADING = "🄳🄾🅆🄽🄻🄾🄰🄳🄸🄽🄶"
-    STATUS_CLONING = "🄲🄻🄾🄽🄽🄸🄽🄶"
-    STATUS_WAITING = "🅀🅄🄴🅄🄴🄳"
-    STATUS_FAILED = "🄵🄰🄸🄻🄴🄳"
-    STATUS_ARCHIVING = "🄰🅁🄲🄷🄸🅅🄸🄽🄶"
-    STATUS_EXTRACTING = "🄴🅇🅃🅁🄰🄲🅃🄸🄽🄶"
+    STATUS_UPLOADING = "Uploading...📤"
+    STATUS_DOWNLOADING = "Downloading...📥"
+    STATUS_CLONING = "Cloning...♻️"
+    STATUS_WAITING = "Queued...📝"
+    STATUS_FAILED = "Failed 🚫. Cleaning Download..."
+    STATUS_PAUSE = "Paused...⭕️"
+    STATUS_ARCHIVING = "Archiving...🔐"
+    STATUS_EXTRACTING = "Extracting...📂"
 
 
 PROGRESS_MAX_SIZE = 100 // 8
@@ -156,43 +157,50 @@ def get_readable_message():
         for download in list(download_dict.values()):
             INDEX += 1
             if INDEX > COUNT:
-                msg += f"\n<b>ℹ️ Status ℹ️</b>\n<i>{download.status()}</i>\n"                
-                msg += f"<b>📁 Filename:</b> <code>{download.name()}</code>"
-                if download.status() != MirrorStatus.STATUS_ARCHIVING and download.status() != MirrorStatus.STATUS_EXTRACTING:
-                    msg += f"\n<code>{get_progress_bar_string(download)} {download.progress()}</code>"
-                    if download.status() == MirrorStatus.STATUS_DOWNLOADING:
-                        msg += f"\n<b>📥 Downloaded:</b> {get_readable_file_size(download.processed_bytes())}<b>\n💾 Size</b>: {download.size()}"
-                    elif download.status() == MirrorStatus.STATUS_CLONING:
-                        msg += f"\n<b>♻️ Cloning:</b> {get_readable_file_size(download.processed_bytes())}<b>\n<b>⚙️ Engine: ʀᴄʟᴏɴᴇ</b>\n💾 Size</b>: {download.size()}"
+                msg += f"<b>Filename:</b> <code>{download.name()}</code>"
+                msg += f"\n<b>Status:</b> <i>{download.status()}</i>"
+                if download.status() not in [
+                    MirrorStatus.STATUS_ARCHIVING,
+                    MirrorStatus.STATUS_EXTRACTING,
+                ]:
+                    msg += f"\n<code>{get_progress_bar_string(download)}</code>\n<b>Percent:</b> <code>{download.progress()}</code>"
+                    if download.status() == MirrorStatus.STATUS_CLONING:
+                        msg += f"\n<b>Cloned:</b> <code>{get_readable_file_size(download.processed_bytes())}</code>\n<b>Size:</b> <code>{download.size()}</code>"
+                    elif download.status() == MirrorStatus.STATUS_UPLOADING:
+                        msg += f"\n<b>Uploaded:</b> <code>{get_readable_file_size(download.processed_bytes())}</code>\n<b>Size:</b> <code>{download.size()}</code>"
                     else:
-                        msg += f"\n<b>📤 Uploaded:</b> {get_readable_file_size(download.processed_bytes())}<b>\n<b>⚙️ Engine: ʀᴄʟᴏɴᴇ</b>\n💾 Size</b>: {download.size()}"
-                    msg += f"\n<b>⚡ Speed:</b> {download.speed()}" \
-                            f"\n<b>⏲️ ETA:</b> {download.eta()} "
+                        msg += f"\n<b>Downloaded:</b> <code>{get_readable_file_size(download.processed_bytes())}</code>\n<b>Size:</b> <code>{download.size()}</code>"
+                    msg += f"\n<b>Speed:</b> <code>{download.speed()}</code>\n<b>ETA:</b> <code>{download.eta()}</code>"
                     # if hasattr(download, 'is_torrent'):
                     try:
-                        msg += f"\n<b>👥 User:</b> <b>{download.message.from_user.first_name}</b>\n<b>⚠️ Warn:</b><code>/warn {download.message.from_user.id}</code>"
+                        msg += f"\n<b>Engine:</b> Aria2\n<b>🌱:</b> <code>{download.aria_download().num_seeders}</code>"
                     except:
                         pass
                     try:
-                        msg += f"\n<b>⚙️ Engine: Aria2</b>\n<b>📶:</b> {download.aria_download().connections}"
+                        msg += f" | <b>📶:</b> <code>{download.aria_download().connections}</code>"
                     except:
                         pass
                     try:
-                        msg += f" | <b>🌱:</b> {download.aria_download().num_seeders}"
+                        msg += f"\n<b>Engine:</b> Qbit\n<b>🌱:</b> <code>{download.torrent_info().num_seeds}</code>" \
+                            f" | <b>🌍:</b> <code>{download.torrent_info().num_leechs}</code>"
                     except:
                         pass
-                    msg += f"\n<b>⛔ Cancel:</b> <code>/{BotCommands.CancelMirror} {download.gid()}</code>"
+                    try:
+                        msg += f"\n<b>User:</b> <b>{download.message.from_user.first_name}</b>\n<b>Warn:</b><code>/warn {download.message.from_user.id}</code>"
+                    except:
+                        pass
+                    msg += f"\n<b>To Stop:</b> <code>/{BotCommands.CancelMirror} {download.gid()}</code>"
                 msg += "\n\n"
                 if STATUS_LIMIT is not None and INDEX >= COUNT + STATUS_LIMIT:
-                        break
+                    break
         if STATUS_LIMIT is not None:
             if INDEX > COUNT + STATUS_LIMIT:
                 return None, None
             if dick_no > STATUS_LIMIT:
-                msg += f"📖 Page: <code>{PAGE_NO}/{pages}</code> | <code>📄 Tasks: {dick_no}</code>\n"
+                msg += f"<b>Page:</b> <code>{PAGE_NO}/{pages}</code> | <b>Tasks:</b> <code>{dick_no}</code>\n"
                 buttons = button_build.ButtonMaker()
-                buttons.sbutton("⬅️", "pre")
-                buttons.sbutton("➡️", "nex")
+                buttons.sbutton("Previous", "pre")
+                buttons.sbutton("Next", "nex")
                 button = InlineKeyboardMarkup(buttons.build_menu(2))
                 return msg, button
         return msg, ""

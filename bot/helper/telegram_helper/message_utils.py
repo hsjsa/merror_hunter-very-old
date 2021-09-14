@@ -3,11 +3,10 @@ from telegram.ext import CallbackContext, CallbackQueryHandler
 from telegram.message import Message
 from telegram.update import Update
 import psutil, shutil
-from datetime import datetime
 import time
-import pytz
-from bot import *
-from bot.helper.ext_utils.bot_utils import get_readable_message, get_readable_file_size, get_readable_time, MirrorStatus, progress_bar, setInterval
+from bot import AUTO_DELETE_MESSAGE_DURATION, LOGGER, bot, \
+    status_reply_dict, status_reply_dict_lock, download_dict, download_dict_lock, botStartTime, Interval, DOWNLOAD_STATUS_UPDATE_INTERVAL, LOG_CHANNEL_ID, LOG_SEND_TEXT, LOG_CHANNEL_LINK
+from bot.helper.ext_utils.bot_utils import get_readable_message, get_readable_file_size, get_readable_time, MirrorStatus, setInterval
 from telegram.error import TimedOut, BadRequest
 
 
@@ -117,7 +116,9 @@ def update_all_messages():
     msg, buttons = get_readable_message()
     if msg is None:
         return
-    msg += f"\n<b>🕊️ Free:</b> {free}"
+    msg += f"<b>CPU:</b> <code>{psutil.cpu_percent()}%</code>" \
+           f"\n<b>RAM:</b> <code>{psutil.virtual_memory().percent}%</code>" \
+           f"\n<b>DISK:</b> <code>{psutil.disk_usage('/').percent}%</code>"
     with download_dict_lock:
         dlspeed_bytes = 0
         uldl_bytes = 0
@@ -135,7 +136,7 @@ def update_all_messages():
                     uldl_bytes += float(speedy.split('M')[0]) * 1048576
         dlspeed = get_readable_file_size(dlspeed_bytes)
         ulspeed = get_readable_file_size(uldl_bytes)
-        msg += f"\n\n<b>🔺 UL:</b> {ulspeed}ps\n<b>🔻 DL:</b> {dlspeed}ps\n"
+        msg += f"\n\n<b>FREE:</b> <code>{free}</code>\n<b>UPTIME:</b> <code>{currentTime}</code>\n\n<b>🔺:</b> <code>{ulspeed}/s</code>\n<b>🔻:</b> <code>{dlspeed}/s</code>\n"
     with status_reply_dict_lock:
         for chat_id in list(status_reply_dict.keys()):
             if status_reply_dict[chat_id] and msg != status_reply_dict[chat_id].text:
@@ -158,7 +159,9 @@ def sendStatusMessage(msg, bot):
     progress, buttons = get_readable_message()
     if progress is None:
         progress, buttons = get_readable_message()
-    progress += f"\n<b>🕊️ Free:</b> {free}"
+    progress += f"<b>CPU:</b> <code>{psutil.cpu_percent()}%</code>" \
+           f"\n<b>RAM:</b> <code>{psutil.virtual_memory().percent}%</code>" \
+           f"\n<b>DISK:</b> <code>{psutil.disk_usage('/').percent}%</code>"
     with download_dict_lock:
         dlspeed_bytes = 0
         uldl_bytes = 0
@@ -176,7 +179,7 @@ def sendStatusMessage(msg, bot):
                     uldl_bytes += float(speedy.split('M')[0]) * 1048576
         dlspeed = get_readable_file_size(dlspeed_bytes)
         ulspeed = get_readable_file_size(uldl_bytes)
-        progress += f"\n\n<b>🔺 UL:</b> {ulspeed}ps\n<b>🔻 DL:</b> {dlspeed}ps\n"
+        progress += f"\n\n<b>FREE:</b> <code>{free}</code>\n<b>UPTIME:</b> <code>{currentTime}</code>\n\n<b>🔺:</b> <code>{ulspeed}/s</code>\n<b>🔻:</b> <code>{dlspeed}/s</code>\n"
     with status_reply_dict_lock:
         if msg.message.chat.id in list(status_reply_dict.keys()):
             try:

@@ -2,11 +2,8 @@ import shutil, psutil
 import signal
 import os
 import asyncio
-import importlib
-from speedtest import Speedtest
 
 from pyrogram import idle, filters, types, emoji
-from bot import *
 from sys import executable
 from datetime import datetime
 from quoters import Quote
@@ -19,21 +16,22 @@ from telegram import ParseMode, BotCommand, InputTextMessageContent, InlineQuery
 from telegram.ext import Filters, InlineQueryHandler, MessageHandler, CommandHandler, CallbackQueryHandler, CallbackContext
 from telegram.utils.helpers import escape_markdown
 from telegram.ext import CommandHandler
+from telegram.error import BadRequest, Unauthorized
+from wserver import start_server_async
+from bot import bot, app, dispatcher, updater, botStartTime, IGNORE_PENDING_REQUESTS, IS_VPS, PORT, alive, web, OWNER_ID, AUTHORIZED_CHATS, IMAGE_URL, CHANNEL_LINK, SUPPORT_LINK
 from bot.helper.ext_utils import fs_utils
 from bot.helper.telegram_helper.bot_commands import BotCommands
 from bot.helper.telegram_helper.message_utils import *
 from .helper.ext_utils.bot_utils import get_readable_file_size, get_readable_time
 from .helper.telegram_helper.filters import CustomFilters
 from bot.helper.telegram_helper import button_build
-from bot.helper import get_text, check_heroku
 from .modules import authorize, list, cancel_mirror, mirror_status, mirror, clone, watch, delete, usage, count
-now=datetime.now(pytz.timezone(f'{TIMEZONE}'))
 
 IMAGE_X = f"{IMAGE_URL}"
 
 def stats(update, context):
     currentTime = get_readable_time(time.time() - botStartTime)
-    current = now.strftime('%d/%m/%Y\n%I:%M:%S %p')
+    current = now.strftime('📅: %d/%m/%Y\n⏲️: %I:%M:%S %p')
     total, used, free = shutil.disk_usage('.')
     total = get_readable_file_size(total)
     used = get_readable_file_size(used)
@@ -43,16 +41,18 @@ def stats(update, context):
     cpuUsage = psutil.cpu_percent(interval=0.5)
     memory = psutil.virtual_memory().percent
     disk = psutil.disk_usage('/').percent
-    stats = f'<b>Bot Uptime</b>\n<b>{currentTime}</b>\n\n' \
-            f'<b>Start Time</b>\n<b>{current}</b>\n\n' \
-            f'<b>Disk Space:</b> <b>{total}</b>\n' \
-            f'<b>Used:</b> <b>{used}</b>\n' \
-            f'<b>Free:</b> <b>{free}</b>\n\n' \
-            f'<b>📊Data Usage📊</b>\n<b>Upload:</b> <b>{sent}</b>\n' \
-            f'<b>Download:</b> <b>{recv}</b>\n\n' \
-            f'<b>CPU:</b> <b>{cpuUsage}%</b>\n' \
-            f'<b>RAM:</b> <b>{memory}%</b>\n' \
-            f'<b>DISK:</b> <b>{disk}%</b>'
+    stats = f'<b>ℹ️ Bot Uptime ℹ️</b>\n<b>{currentTime}</b>\n\n' \
+            f'<b>▶️ Start Time ▶️</b>\n<b>{current}</b>\n\n' \
+            f'<b>⚙️ System Usage ⚙️</b>\n' \
+            f'<b>💿 Disk Space:</b> <b>{total}</b>\n' \
+            f'<b>📀 Used:</b> <b>{used}</b>\n' \
+            f'<b>🕊️ Free:</b> <b>{free}</b>\n' \
+            f'<b>💻 CPU:</b> <b>{cpuUsage}%</b>\n' \
+            f'<b>🖥️ RAM:</b> <b>{memory}%</b>\n' \
+            f'<b>💽 DISK:</b> <b>{disk}%</b>\n\n' \
+            f'<b>📊Data Usage📊</b>\n<b>📤 Upload:</b> <b>{sent}</b>\n' \
+            f'<b>📥 Download:</b> <b>{recv}</b>'
+
     update.effective_message.reply_photo(IMAGE_X, stats, parse_mode=ParseMode.HTML)
 
 
@@ -84,6 +84,8 @@ def restart(update, context):
         f.truncate(0)
         f.write(f"{restart_message.chat.id}\n{restart_message.message_id}\n")
     fs_utils.clean_all()
+    alive.terminate()
+    web.terminate()
     os.execl(executable, executable, "-m", "bot")
 
 def log(update, context):
@@ -95,6 +97,8 @@ def bot_help(update, context):
 /{BotCommands.HelpCommand}: To get this message
 
 /{BotCommands.MirrorCommand} [download_url][magnet_link]: Start mirroring the link to Google Drive
+
+<code>/{BotCommands.MirrorCommand} qb</code> [download_url][magnet_link]: Start mirroring the link to Google Drive
 
 /{BotCommands.TarMirrorCommand} [download_url][magnet_link]: Start mirroring and upload the archived (.tar) version of the download
 
@@ -143,6 +147,8 @@ def bot_help(update, context):
 /{BotCommands.HelpCommand}: To get this message
 
 /{BotCommands.MirrorCommand} [download_url][magnet_link]: Start mirroring the link to Google Drive
+
+<code>/{BotCommands.MirrorCommand} qb</code> [download_url][magnet_link]: Start mirroring the link to Google Drive
 
 /{BotCommands.TarMirrorCommand} [download_url][magnet_link]: Start mirroring and upload the archived (.tar) version of the download
 
@@ -200,43 +206,29 @@ botcmds = [
     ]
 
 
-def main():
-    # Heroku restarted
-    quo_te = Quote.print()
-    GROUP_ID = f'{RESTARTED_GROUP_ID}'
-    kie = datetime.now(pytz.timezone(f'{TIMEZONE}'))
-    jam = kie.strftime('\n📅 𝘿𝘼𝙏𝙀: %d/%m/%Y\n⏲️ 𝙏𝙄𝙈𝙀: %I:%M%P')
-    if GROUP_ID is not None and isinstance(GROUP_ID, str):        
-        try:
-            dispatcher.bot.sendMessage(f"{GROUP_ID}", f"♻️ 𝐁𝐎𝐓 𝐆𝐎𝐓 𝐑𝐄𝐒𝐓𝐀𝐑𝐓𝐄𝐃 ♻️\n{jam}\n\n🗺️ 𝙏𝙄𝙈𝙀 𝙕𝙊𝙉𝙀\n{TIMEZONE}\n\n𝙿𝙻𝙴𝙰𝚂𝙴 𝚁𝙴-𝙳𝙾𝚆𝙽𝙻𝙾𝙰𝙳 𝙰𝙶𝙰𝙸𝙽\n\n𝐐𝐮𝐨𝐭𝐞\n{quo_te}\n\n#Restarted")
-        except Unauthorized:
-            LOGGER.warning(
-                "Bot isnt able to send message to support_chat, go and check!"
-            )
-        except BadRequest as e:
-            LOGGER.warning(e.message)
-
-# Heroku restarted
-    GROUP_ID2 = f'{RESTARTED_GROUP_ID2}'
-    kie = datetime.now(pytz.timezone(f'{TIMEZONE}'))
-    jam = kie.strftime('\n📅 𝘿𝘼𝙏𝙀: %d/%m/%Y\n⏲️ 𝙏𝙄𝙈𝙀: %I:%M%P')
-    if GROUP_ID2 is not None and isinstance(GROUP_ID2, str):        
-        try:
-            dispatcher.bot.sendMessage(f"{GROUP_ID2}", f"♻️ 𝐁𝐎𝐓 𝐆𝐎𝐓 𝐑𝐄𝐒𝐓𝐀𝐑𝐓𝐄𝐃 ♻️\n{jam}\n\n🗺️ 𝙏𝙄𝙈𝙀 𝙕𝙊𝙉𝙀\n{TIMEZONE}\n\n𝙿𝙻𝙴𝙰𝚂𝙴 𝚁𝙴-𝙳𝙾𝚆𝙽𝙻𝙾𝙰𝙳 𝙰𝙶𝙰𝙸𝙽\n\n𝐐𝐮𝐨𝐭𝐞\n{quo_te}\n\n#Restarted")
-        except Unauthorized:
-            LOGGER.warning(
-                "Bot isnt able to send message to support_chat, go and check!"
-            )
-        except BadRequest as e:
-            LOGGER.warning(e.message)            
-            
+def main():        
     fs_utils.start_cleanup()
+    if IS_VPS:
+        asyncio.get_event_loop().run_until_complete(start_server_async(PORT))
     # Check if the bot is restarting
     if os.path.isfile(".restartmsg"):
         with open(".restartmsg") as f:
             chat_id, msg_id = map(int, f)
-        bot.edit_message_text("📶𝐑𝐄𝐒𝐓𝐀𝐑𝐓 𝐒𝐔𝐂𝐂𝐄𝐒𝐒𝐅𝐔𝐋𝐋𝐘", chat_id, msg_id)
+        bot.edit_message_text("Restarted successfully!", chat_id, msg_id)
         os.remove(".restartmsg")
+    
+    elif OWNER_ID:
+        try:
+            text = "<b>Bot Restarted!</b>"
+            bot.sendMessage(chat_id=OWNER_ID, text=text, parse_mode=ParseMode.HTML)
+            if AUTHORIZED_CHATS:
+                for i in AUTHORIZED_CHATS:
+                    bot.sendMessage(chat_id=i, text=text, parse_mode=ParseMode.HTML)
+        except Unauthorized:
+            LOGGER.warning("Bot isn't able to send message to OWNER_ID or AUTHORIZED_CHATS, go and check!")
+        except BadRequest as e:
+            LOGGER.warning(e.message)
+
     bot.set_my_commands(botcmds)
 
     start_handler = CommandHandler(BotCommands.StartCommand, start, run_async=True)

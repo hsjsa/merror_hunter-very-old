@@ -109,7 +109,7 @@ class MirrorListener(listeners.MirrorListeners):
                 LOGGER.info("Not any valid archive, uploading file as it is.")
                 path = f"""{DOWNLOAD_DIR}{self.uid}/{name}"""
         else:
-            path = f"""{DOWNLOAD_DIR}{self.uid}/{name}"""'
+            path = f"""{DOWNLOAD_DIR}{self.uid}/{name}"""
         up_name = pathlib.PurePath(path).name
         up_path = f"""{DOWNLOAD_DIR}{self.uid}/{up_name}"""
         LOGGER.info(f"""Upload Name: {up_name}""")

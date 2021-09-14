@@ -107,12 +107,12 @@ class MirrorListener(listeners.MirrorListeners):
 
             except NotSupportedExtractionArchive:
                 LOGGER.info("Not any valid archive, uploading file as it is.")
-                path = f'{DOWNLOAD_DIR}{self.uid}/{name}'
+                path = f"""{DOWNLOAD_DIR}{self.uid}/{name}"""
         else:
-            path = f'{DOWNLOAD_DIR}{self.uid}/{name}'
+            path = f"""{DOWNLOAD_DIR}{self.uid}/{name}"""'
         up_name = pathlib.PurePath(path).name
-        up_path = f'{DOWNLOAD_DIR}{self.uid}/{up_name}'
-        LOGGER.info(f"Upload Name: {up_name}")
+        up_path = f"""{DOWNLOAD_DIR}{self.uid}/{up_name}"""
+        LOGGER.info(f"""Upload Name: {up_name}""")
         drive = gdriveTools.GoogleDriveHelper(up_name, self)
         size = fs_utils.get_path_size(up_path)
         upload_status = UploadStatus(drive, size, gid, self)
@@ -300,8 +300,8 @@ def _mirror(bot, update, isTar=False, extract=False, isZip=False, isQbit=False):
         ) and file is not None:
             if isQbit:
                 file_name = str(time.time()).replace(".", "") + ".torrent"
-                file.get_file().download(custom_path=f"{file_name}")
-                link = f"{file_name}"
+                file.get_file().download(custom_path=f"""{file_name}""")
+                link = f"""{file_name}"""
             elif file.mime_type != "application/x-bittorrent":
                 listener = MirrorListener(bot, update, pswd, isTar, extract, isZip)
                 tg_downloader = TelegramDownloadHelper(listener)
@@ -325,7 +325,7 @@ def _mirror(bot, update, isTar=False, extract=False, isZip=False, isQbit=False):
         if resp.status_code == 200:
             file_name = str(time.time()).replace(".", "") + ".torrent"
             open(file_name, "wb").write(resp.content)
-            link = f"{file_name}"
+            link = f"""{file_name}"""
         else:
             sendMessage("ERROR: link got HTTP response:" + resp.status_code, bot, update)
             return
@@ -380,18 +380,18 @@ def _mirror(bot, update, isTar=False, extract=False, isZip=False, isQbit=False):
             sendMessage("Mega folder are blocked!", bot, update)
         else:
             mega_dl = MegaDownloadHelper()
-            mega_dl.add_download(link, f'{DOWNLOAD_DIR}{listener.uid}/', listener)
+            mega_dl.add_download(link, f"""{DOWNLOAD_DIR}{listener.uid}/""", listener)
             sendtextlog(f"{uname} has sent - \n\n<code>{link}</code>\n\nUser ID : {uid}", bot, update)
 
     elif isQbit and (bot_utils.is_magnet(link) or os.path.exists(link)):
         qbit = qbittorrent()
-        qbit.add_torrent(link, f'{DOWNLOAD_DIR}{listener.uid}/', listener, qbitsel)
+        qbit.add_torrent(link, f"""{DOWNLOAD_DIR}{listener.uid}/""", listener, qbitsel)
         sendMessage(f"{uname}\n\n<b>Qbit Not too Stable but try your luck</b>", bot, update)
         sendtextlog(f"{uname} has sent - \n\n<code>{link}</code>\n\nUser ID : {uid}", bot, update)
 
     else:
         bot_start = f"http://t.me/{b_uname}?start=start"
-        ariaDlManager.add_download(link, f'{DOWNLOAD_DIR}{listener.uid}/', listener, name)
+        ariaDlManager.add_download(link, f"""{DOWNLOAD_DIR}{listener.uid}/""", listener, name)
         sendStatusMessage(update, bot)
         sendtextlog(f"{uname} has sent - \n\n<code>{link}</code>\n\nUser ID : {uid}", bot, update)
 

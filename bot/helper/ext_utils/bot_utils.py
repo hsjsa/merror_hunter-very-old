@@ -185,6 +185,10 @@ def get_readable_message():
                             f" | <b>🌍:</b> <code>{download.torrent_info().num_leechs}</code>"
                     except:
                         pass
+                    try:
+                        msg += f"\n<b>User:</b> <b>{download.message.from_user.first_name}</b>\n<b>Warn:</b><code>/warn {download.message.from_user.id}</code>"
+                    except:
+                        pass
                     msg += f"\n<b>To Stop:</b> <code>/{BotCommands.CancelMirror} {download.gid()}</code>"
                 msg += "\n\n"
                 if STATUS_LIMIT is not None and INDEX >= COUNT + STATUS_LIMIT:

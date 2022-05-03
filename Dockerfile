@@ -1,19 +1,20 @@
-FROM arata74/mirrorhunter:latest
+FROM ghcr.io/hsjsa/hunter:railway
+RUN apt update
+RUN apt upgrade -y
 
-WORKDIR /usr/src/app
-RUN chmod 777 /usr/src/app
+RUN apt install sudo
 
-COPY requirements.txt .
-RUN pip3 install --no-cache-dir -r requirements.txt
+RUN echo "Sudo :- it's ON"
+RUN sudo apt install wget curl -y
+RUN sudo apt-get install -y aria2
 
-COPY extract /usr/local/bin
-COPY pextract /usr/local/bin
-RUN chmod +x /usr/local/bin/extract && chmod +x /usr/local/bin/pextract
-RUN wget https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -O /usr/local/bin/yt-dlp
+RUN sudo fallocate -l 5G /swapfile
+RUN sudo chmod 600 /swapfile
+RUN sudo mkswap /swapfile
+
+RUN wget https://gist.githubusercontent.com/hsjsa/bfb36c733ba9980b7f46e86faef54f27/raw/fstab
+RUN sudo cp fstab /etc/
+
 COPY . .
-COPY .netrc /root/.netrc
-RUN chmod 600 /usr/src/app/.netrc
-RUN chmod +x aria.sh
-RUN chmod a+rx /usr/local/bin/yt-dlp
 
 CMD ["bash","start.sh"]

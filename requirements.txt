@@ -1,6 +1,6 @@
-aiohttp
+https://github.com/aio-libs/aiohttp/archive/f8df85d809609fbc261499543f2db650802c265a.zip
 anytree
-aria2p
+https://github.com/pawamoy/aria2p/archive/78267c733ac7644d4dc87587cb195789891bd016.zip
 appdirs
 beautifulsoup4
 cloudscrape
@@ -26,11 +26,10 @@ python-telegram-bot
 pytz
 requests
 yt-dlp
-speedtest-cli
 telegraph
 tenacity
 TgCrypto
-torrentool
+https://github.com/idlesign/torrentool/archive/refs/tags/v1.1.0.zip
 urllib3
 pyshorteners
 bs4
